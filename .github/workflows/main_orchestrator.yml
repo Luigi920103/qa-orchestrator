@@ -32,13 +32,9 @@ jobs:
           echo "pw_ts Changed: ${{ github.event.client_payload.pw_ts_changed }}"
           echo "pw_js_bdd Changed: ${{ github.event.client_payload.pw_js_bdd_changed }}"
           echo "pw_js Changed: ${{ github.event.client_payload.pw_js_changed }}"
-          echo "Manual Service Selection: ${{ inputs.service }}"
 
-      # --- EJECUCIÓN DE PLAYWRIGHT TS BDD ---
+      # --- 1. PLAYWRIGHT TS BDD ---
       - name: 🚀 Triggering Playwright TS BDD
-        # Se ejecuta si:
-        # A) Es manual y se eligió 'pw_ts_bdd' o 'all'
-        # B) Es automático y detectó cambios en 'frontend'
         if: |
           contains(fromJSON('["pw_ts_bdd", "all"]'), inputs.service) || 
           github.event.client_payload.pw_ts_bdd_changed == 'true'
@@ -49,11 +45,8 @@ jobs:
           event-type: run-playwright-docker
           client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env }}"}'
 
-      # --- EJECUCIÓN DE PLAYWRIGHT TS ---
+      # --- 2. PLAYWRIGHT TS (SIN BDD) ---
       - name: 🚀 Triggering Playwright TS
-        # Se ejecuta si:
-        # A) Es manual y se eligió 'pw_ts' o 'all'
-        # B) Es automático y detectó cambios en 'frontend'
         if: |
           contains(fromJSON('["pw_ts", "all"]'), inputs.service) || 
           github.event.client_payload.pw_ts_changed == 'true'
@@ -64,7 +57,14 @@ jobs:
           event-type: run-playwright-docker
           client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env }}"}'
 
+      # --- 3. API TESTS (OPCIONAL/FUTURO) ---
+      - name: 🚀 Triggering API Framework
+        if: |
+          inputs.service == 'api' || 
+          github.event.client_payload.api_changed == 'true'
+        uses: peter-evans/repository-dispatch@v2
+        with:
           token: ${{ secrets.ORCHESTRATOR_TOKEN }}
-          repository: tu-usuario/repo-api-tests
+          repository: Luigi920103/repo-api-tests
           event-type: run-api-tests
           client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env }}"}'

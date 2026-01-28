@@ -1,0 +1,50 @@
+name: QA Orchestrator Central
+on:
+  # 1. Permite que otros repositorios le avisen (App -> Orquestador)
+  repository_dispatch:
+    types: [trigger-all-tests]
+
+  # 2. Permite ejecutarlo manualmente con botones desde GitHub
+  workflow_dispatch:
+    inputs:
+      service:
+        description: '¿Qué framework se ejecutará?'
+        required: true
+        default: 'pw_ts_bdd'
+        type: choice
+        options: [pw_ts_bdd, pw_ts, pw_js_bdd, pw_js, all]
+      env:
+        description: 'Entorno de destino'
+        required: true
+        default: 'dev'
+        type: choice
+        options: [dev,staging, qa, prod]
+
+jobs:
+  routing:
+    name: Route Execution
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔍 Analyzing Trigger
+        run: |
+          echo "Servicio detectado: ${{ github.event.client_payload.service || inputs.service }}"
+          echo "Ambiente detectado: ${{ github.event.client_payload.env || inputs.env }}"
+
+      - name: 🚀 Triggering Playwright TS Bdd  Framework
+        # Solo se dispara si el servicio es 'pw_ts_bdd' o 'all'
+        if: contains(fromJSON('["pw_ts_bdd", "all"]'), github.event.client_payload.service || inputs.service)
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.ORCHESTRATOR_TOKEN }}
+          repository: Luigi920103/pw_ts_bdd 
+          event-type: run-playwright-docker
+          client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env }}"}'
+
+      - name: 🚀 Triggering API Framework (Opcional futuro)
+        # Solo se dispara si el servicio es 'backend' o 'all'
+        if: contains(fromJSON('["backend", "all"]'), github.event.client_payload.service || inputs.service)
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.ORCHESTRATOR_TOKEN }}
+          repository: tu-usuario/repo-api-tests # Ejemplo de otro framework
+          event-type: run-api-tests

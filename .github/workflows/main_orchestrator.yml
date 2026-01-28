@@ -1,10 +1,10 @@
 name: QA Orchestrator Central
 on:
-  # 1. Permite que otros repositorios le avisen (App -> Orquestador)
+  # 1. Recibe la señal inteligente de la App
   repository_dispatch:
-    types: [trigger-all-tests]
+    types: [trigger-automation]
 
-  # 2. Permite ejecutarlo manualmente con botones desde GitHub
+  # 2. Ejecución manual desde la UI
   workflow_dispatch:
     inputs:
       service:
@@ -18,7 +18,7 @@ on:
         required: true
         default: 'dev'
         type: choice
-        options: [dev,staging, qa, prod]
+        options: [dev, staging, qa, prod]
 
 jobs:
   routing:
@@ -27,24 +27,44 @@ jobs:
     steps:
       - name: 🔍 Analyzing Trigger
         run: |
-          echo "Servicio detectado: ${{ github.event.client_payload.service || inputs.service }}"
-          echo "Ambiente detectado: ${{ github.event.client_payload.env || inputs.env }}"
+          echo "Trigger Source: ${{ github.event_name }}"
+          echo "pw_ts_bdd Changed: ${{ github.event.client_payload.pw_ts_bdd_changed }}"
+          echo "pw_ts Changed: ${{ github.event.client_payload.pw_ts_changed }}"
+          echo "pw_js_bdd Changed: ${{ github.event.client_payload.pw_js_bdd_changed }}"
+          echo "pw_js Changed: ${{ github.event.client_payload.pw_js_changed }}"
+          echo "Manual Service Selection: ${{ inputs.service }}"
 
-      - name: 🚀 Triggering Playwright TS Bdd  Framework
-        # Solo se dispara si el servicio es 'pw_ts_bdd' o 'all'
-        if: contains(fromJSON('["pw_ts_bdd", "all"]'), github.event.client_payload.service || inputs.service)
+      # --- EJECUCIÓN DE PLAYWRIGHT TS BDD ---
+      - name: 🚀 Triggering Playwright TS BDD
+        # Se ejecuta si:
+        # A) Es manual y se eligió 'pw_ts_bdd' o 'all'
+        # B) Es automático y detectó cambios en 'frontend'
+        if: |
+          contains(fromJSON('["pw_ts_bdd", "all"]'), inputs.service) || 
+          github.event.client_payload.pw_ts_bdd_changed == 'true'
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.ORCHESTRATOR_TOKEN }}
-          repository: Luigi920103/pw_ts_bdd 
+          repository: Luigi920103/pw_ts_bdd
           event-type: run-playwright-docker
           client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env }}"}'
 
-      - name: 🚀 Triggering API Framework (Opcional futuro)
-        # Solo se dispara si el servicio es 'backend' o 'all'
-        if: contains(fromJSON('["backend", "all"]'), github.event.client_payload.service || inputs.service)
+      # --- EJECUCIÓN DE PLAYWRIGHT TS ---
+      - name: 🚀 Triggering Playwright TS
+        # Se ejecuta si:
+        # A) Es manual y se eligió 'pw_ts' o 'all'
+        # B) Es automático y detectó cambios en 'frontend'
+        if: |
+          contains(fromJSON('["pw_ts", "all"]'), inputs.service) || 
+          github.event.client_payload.pw_ts_changed == 'true'
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.ORCHESTRATOR_TOKEN }}
-          repository: tu-usuario/repo-api-tests # Ejemplo de otro framework
+          repository: Luigi920103/pw_ts
+          event-type: run-playwright-docker
+          client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env }}"}'
+
+          token: ${{ secrets.ORCHESTRATOR_TOKEN }}
+          repository: tu-usuario/repo-api-tests
           event-type: run-api-tests
+          client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env }}"}'

@@ -28,43 +28,45 @@ jobs:
       - name: 🔍 Analyzing Trigger
         run: |
           echo "Trigger Source: ${{ github.event_name }}"
-          echo "pw_ts_bdd Changed: ${{ github.event.client_payload.pw_ts_bdd_changed }}"
-          echo "pw_ts Changed: ${{ github.event.client_payload.pw_ts_changed }}"
-          echo "pw_js_bdd Changed: ${{ github.event.client_payload.pw_js_bdd_changed }}"
-          echo "pw_js Changed: ${{ github.event.client_payload.pw_js_changed }}"
+          echo "--- Detalle del Payload Recibido ---"
+          echo '${{ toJson(github.event.client_payload) }}'
+          echo "------------------------------------"
+          echo "Analizando carpetas específicas:"
+          echo "pw_ts_bdd: ${{ github.event.client_payload.pw_ts_bdd_changed }}"
+          echo "pw_ts: ${{ github.event.client_payload.pw_ts_changed }}"
 
       # --- 1. PLAYWRIGHT TS BDD ---
       - name: 🚀 Triggering Playwright TS BDD
         if: |
-          contains(fromJSON('["pw_ts_bdd", "all"]'), inputs.service) || 
-          github.event.client_payload.pw_ts_bdd_changed == 'true'
+          (github.event_name == 'workflow_dispatch' && (inputs.service == 'pw_ts_bdd' || inputs.service == 'all')) ||
+          (github.event_name == 'repository_dispatch' && github.event.client_payload.pw_ts_bdd_changed == 'true')
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.ORCHESTRATOR_TOKEN }}
           repository: Luigi920103/pw_ts_bdd
           event-type: run-playwright-docker
-          client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env }}"}'
+          client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env || 'dev' }}"}'
 
       # --- 2. PLAYWRIGHT TS (SIN BDD) ---
       - name: 🚀 Triggering Playwright TS
         if: |
-          contains(fromJSON('["pw_ts", "all"]'), inputs.service) || 
-          github.event.client_payload.pw_ts_changed == 'true'
+          (github.event_name == 'workflow_dispatch' && (inputs.service == 'pw_ts' || inputs.service == 'all')) ||
+          (github.event_name == 'repository_dispatch' && github.event.client_payload.pw_ts_changed == 'true')
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.ORCHESTRATOR_TOKEN }}
           repository: Luigi920103/pw_ts
           event-type: run-playwright-docker
-          client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env }}"}'
+          client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env || 'dev' }}"}'
 
-      # --- 3. API TESTS (OPCIONAL/FUTURO) ---
-      - name: 🚀 Triggering API Framework
+      # --- 3. OTROS FRAMEWORKS (JS BDD) ---
+      - name: 🚀 Triggering Playwright JS BDD
         if: |
-          inputs.service == 'api' || 
-          github.event.client_payload.api_changed == 'true'
+          (github.event_name == 'workflow_dispatch' && (inputs.service == 'pw_js_bdd' || inputs.service == 'all')) ||
+          (github.event_name == 'repository_dispatch' && github.event.client_payload.pw_js_bdd_changed == 'true')
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.ORCHESTRATOR_TOKEN }}
-          repository: Luigi920103/repo-api-tests
-          event-type: run-api-tests
-          client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env }}"}'
+          repository: Luigi920103/pw_js_bdd
+          event-type: run-playwright-docker
+          client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env || 'dev' }}"}'

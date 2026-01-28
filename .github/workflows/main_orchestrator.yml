@@ -37,7 +37,7 @@ jobs:
           token: ${{ secrets.ORCHESTRATOR_TOKEN }}
           repository: Luigi920103/pw_ts_bdd
           event-type: run-playwright-docker
-          client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env || "dev" }}"}'
+          client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env }}"}'
 
       - name: 🚀 Triggering Playwright TS
         if: |
@@ -48,4 +48,4 @@ jobs:
           token: ${{ secrets.ORCHESTRATOR_TOKEN }}
           repository: Luigi920103/pw_ts
           event-type: run-playwright-docker
-          client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env || "dev" }}"}'
+          client_payload: '{"env": "${{ github.event.client_payload.env || inputs.env }}"}'
